@@ -13,6 +13,7 @@ type apiConfig struct {
 func main() {
 	const port = "8080"
 	const root = "."
+	const address = "127.0.0.1"
 
 	cfg := &apiConfig{}
 
@@ -21,9 +22,10 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetricsInc)
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	server := http.Server{
-		Addr:    ":" + port,
+		Addr:    address + ":" + port,
 		Handler: mux,
 	}
 
