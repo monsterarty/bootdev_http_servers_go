@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
@@ -11,28 +12,52 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 	type returnVals struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		respondWithError(w, 500, "Couldnt decode body", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldnt decode body", err)
 		return
 	}
 
-	if len(params.Body) > 140 {
+	// Constants and configs
+	const maxChirpLength = 140
+	const minChirpLength = 0
+
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+
+	if len(params.Body) > maxChirpLength {
 		log.Printf("Chirp is too long")
-		respondWithError(w, 400, "Chirp is too long", nil)
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
-	if len(params.Body) <= 0 {
+	if len(params.Body) < minChirpLength {
 		log.Printf("Empty chirp")
-		respondWithError(w, 400, "Chirp is empty", nil)
+		respondWithError(w, http.StatusInternalServerError, "Chirp is empty", nil)
 		return
 	}
+	respondWithJSON(w, http.StatusOK, returnVals{
+		CleanedBody: profaneFilter(params.Body, badWords),
+	})
+}
 
-	respondWithJSON(w, 200, returnVals{Valid: true})
+func profaneFilter(body string, badWords map[string]struct{}) string {
+	splitted := strings.Split(body, " ")
+
+	for i, word := range splitted {
+		lowered := strings.ToLower(word)
+		if _, ok := badWords[lowered]; ok {
+			splitted[i] = "****"
+		}
+	}
+	joined := strings.Join(splitted, " ")
+	return joined
 
 }
