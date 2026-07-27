@@ -28,7 +28,6 @@ func main() {
 		Addr:    address + ":" + port,
 		Handler: mux,
 	}
-
 	log.Printf("Server running on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
 }
