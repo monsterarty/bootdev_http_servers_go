@@ -14,7 +14,8 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
-	database       *database.Queries
+	db             *database.Queries
+	platform       string
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	dbURL := os.Getenv("DB_URL")
+	platform := os.Getenv("PLATFORM")
 
 	const port = "8080"
 	const root = "."
@@ -35,7 +37,8 @@ func main() {
 	dbQueries := database.New(db)
 
 	cfg := &apiConfig{
-		database: dbQueries,
+		db:       dbQueries,
+		platform: platform,
 	}
 
 	mux := http.NewServeMux()
@@ -44,6 +47,7 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetricsInc)
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
 
 	server := http.Server{
 		Addr:    address + ":" + port,
