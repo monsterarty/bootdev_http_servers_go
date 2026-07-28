@@ -1,2 +1,4 @@
 out
+/out
+bootdev_http_servers_go
 .env
