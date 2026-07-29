@@ -5,14 +5,24 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/monsterarty/bootdev_http_servers_go/internal/database"
 )
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body string `json:"body"`
-	}
-	type returnVals struct {
-		CleanedBody string `json:"cleaned_body"`
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -27,24 +37,38 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	const maxChirpLength = 140
 	const minChirpLength = 0
 
-	badWords := map[string]struct{}{
-		"kerfuffle": {},
-		"sharbert":  {},
-		"fornax":    {},
-	}
-
 	if len(params.Body) > maxChirpLength {
 		log.Printf("Chirp is too long")
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
 	if len(params.Body) < minChirpLength {
-		log.Printf("Empty chirp")
-		respondWithError(w, http.StatusInternalServerError, "Chirp is empty", nil)
+		log.Printf("Empty Chirp")
+		respondWithError(w, http.StatusBadRequest, "Chirp is empty", nil)
 		return
 	}
-	respondWithJSON(w, http.StatusOK, returnVals{
-		CleanedBody: profaneFilter(params.Body, badWords),
+	if len(params.UserID) < 1 {
+		log.Printf("Empty User_ID")
+		respondWithError(w, http.StatusBadRequest, "User_ID is empty", nil)
+		return
+	}
+
+	ctx := r.Context()
+	result, err := cfg.db.CreateChirp(ctx, database.CreateChirpParams{
+		Body:   params.Body,
+		UserID: params.UserID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Coundnt create Chirp", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, Chirp{
+		ID:        result.ID,
+		CreatedAt: result.CreatedAt,
+		UpdatedAt: result.UpdatedAt,
+		Body:      result.Body,
+		UserID:    result.UserID,
 	})
 }
 
