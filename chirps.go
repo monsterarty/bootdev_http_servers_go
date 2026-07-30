@@ -85,3 +85,26 @@ func profaneFilter(body string, badWords map[string]struct{}) string {
 	return joined
 
 }
+
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	chirps, err := cfg.db.GetAllChirps(ctx)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Coundnt fetch Chirps", err)
+		return
+	}
+
+	sliceChirps := make([]Chirp, 0, len(chirps))
+
+	for _, chirp := range chirps {
+		sliceChirps = append(sliceChirps, Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		})
+	}
+	respondWithJSON(w, http.StatusOK, sliceChirps)
+
+}
